@@ -1,0 +1,58 @@
+package hotian.addon.songplayer.songplayer.item;
+
+import hotian.addon.songplayer.songplayer.conversion.SPConverter;
+import hotian.addon.songplayer.songplayer.song.Note;
+import hotian.addon.songplayer.songplayer.song.SongLoaderThread;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
+
+import java.io.IOException;
+
+public class SongItemLoaderThread extends SongLoaderThread {
+    public byte[] songData;
+    public String displayName;
+    public int maxNotesPerSecond = 0;
+    public double avgNotesPerSecond = 0;
+
+    public SongItemLoaderThread(ItemStack stack) throws IOException, IllegalArgumentException {
+        songData = SongItemUtils.getSongData(stack);
+        if (songData == null) {
+            throw new IOException("Song data is missing");
+        }
+        NbtCompound songItemNbt = SongItemUtils.getSongItemTag(stack)
+                .orElseThrow(() -> new IOException("Song item tag is missing"));
+        displayName = songItemNbt.getString(SongItemUtils.DISPLAY_NAME_KEY).orElse(null);
+        filename = displayName;
+    }
+
+    @Override
+    public void run() {
+        try {
+            song = SPConverter.getSongFromBytes(songData, filename);
+            if (displayName != null && displayName.length() > 0) { // Display name has priority
+                song.name = displayName;
+            }
+            if (song.name == null || song.name.length() == 0) { // Fallback to unnamed
+                song.name = "unnamed";
+            }
+
+            song.sort();
+
+            int j = 0;
+            int notesInSecond = 0;
+            for (Note currNote : song.notes) {
+                notesInSecond++;
+                while (song.notes.get(j).time + 1000 < currNote.time) {
+                    j++;
+                    notesInSecond--;
+                }
+                maxNotesPerSecond = Math.max(notesInSecond, maxNotesPerSecond);
+            }
+            avgNotesPerSecond = song.notes.size() * 1000.0 / song.length;
+        }
+        catch (Exception e) {
+            exception = e;
+            e.printStackTrace();
+        }
+    }
+}

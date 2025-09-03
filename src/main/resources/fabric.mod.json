@@ -1,31 +1,31 @@
 {
   "schemaVersion": 1,
-  "id": "addon-template",
+  "id": "songplayer-addon",
   "version": "${version}",
-  "name": "Addon Template",
-  "description": "An addon template for Meteor Client addons.",
+  "name": "Song Player Addon",
+  "description": "A Song Player addon for Meteor Client.",
   "authors": [
-    "seasnail"
+    "hotian"
   ],
   "contact": {
-    "sources": "https://github.com/MeteorDevelopment/meteor-addon-template"
+    "sources": "https://github.com/hotian/meteor-addon-songplayer"
   },
-  "icon": "assets/template/icon.png",
+  "icon": "assets/songplayer/icon.png",
   "environment": "client",
   "entrypoints": {
     "meteor": [
-      "com.example.addon.AddonTemplate"
+      "hotian.addon.songplayer.SongPlayerAddon"
     ]
   },
   "mixins": [
-    "addon-template.mixins.json"
+    "songplayer.mixins.json"
   ],
   "custom": {
     "meteor-client:color": "225,25,25"
   },
   "depends": {
     "java": ">=21",
-    "minecraft": ["${mc_version}", "1.21.7", "1.21.6"],
+    "minecraft": ["${mc_version}", "1.21.8"],
     "meteor-client": "*"
   }
 }
