@@ -10,13 +10,24 @@ import meteordevelopment.meteorclient.settings.StringSetting;
 import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.settings.ProvidedStringSetting;
+import meteordevelopment.meteorclient.gui.GuiTheme;
+import meteordevelopment.meteorclient.gui.widgets.WWidget;
+import meteordevelopment.meteorclient.gui.widgets.containers.WHorizontalList;
+import meteordevelopment.meteorclient.gui.widgets.pressable.WButton;
+import meteordevelopment.meteorclient.utils.player.ChatUtils;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.lwjgl.BufferUtils;
+import org.lwjgl.PointerBuffer;
+import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
 public class SongPlayerModule extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
@@ -29,8 +40,61 @@ public class SongPlayerModule extends Module {
             .build()
     );
 
+    // File filters for the file dialog
+    private final PointerBuffer filters;
+
     public SongPlayerModule() {
         super(SongPlayerAddon.CATEGORY, "song-player", "A module to play songs with noteblocks.");
+        
+        // Initialize file filters
+        filters = BufferUtils.createPointerBuffer(1);
+        ByteBuffer txtFilter = MemoryUtil.memASCII("*.mid;*.midi;*.nbs;*.txt");
+        filters.put(txtFilter);
+        filters.rewind();
+    }
+
+    @Override
+    public WWidget getWidget(GuiTheme theme) {
+        WHorizontalList list = theme.horizontalList();
+        
+        // Button to select a song file
+        WButton selectFile = list.add(theme.button("Select File")).widget();
+        selectFile.action = this::openFileDialog;
+        
+        // Button to play the selected song
+        WButton playButton = list.add(theme.button("Play")).widget();
+        playButton.action = this::playSelectedSong;
+        
+        return list;
+    }
+
+    // Open file dialog to select a song file
+    private void openFileDialog() {
+        String path = TinyFileDialogs.tinyfd_openFileDialog(
+            "Select Song File",
+            SongPlayer.SONG_DIR.toAbsolutePath().toString(),
+            filters,
+            null,
+            false
+        );
+        
+        if (path != null) {
+            // Get the file name relative to the songs directory
+            Path filePath = Path.of(path);
+            Path songsDir = SongPlayer.SONG_DIR.toAbsolutePath();
+            Path relativePath = songsDir.relativize(filePath);
+            songName.set(relativePath.toString());
+            ChatUtils.info("Selected song: " + relativePath.toString());
+        }
+    }
+    
+    // Play the selected song
+    private void playSelectedSong() {
+        if (!songName.get().isEmpty()) {
+            SongHandler.getInstance().loadSong(songName.get());
+        } else {
+            ChatUtils.warning("No song selected. Please select a song file first.");
+        }
     }
 
     @Override
