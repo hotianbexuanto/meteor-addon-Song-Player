@@ -45,6 +45,11 @@ public class SongPlayerSongsScreen extends WindowScreen {
         add(theme.label("Current directory: " + getCurrentDirName())).expandX();
         add(theme.horizontalSeparator()).expandX();
 
+        // Stop button at the top
+        WButton stop = add(theme.button("Stop")).expandX().widget();
+        stop.action = this::stopPlayback;
+        add(theme.horizontalSeparator()).expandX();
+
         // Filter
         filter = add(theme.textBox("", "Search for the songs...")).minWidth(400).expandX().widget();
         filter.setFocused(true);
@@ -58,11 +63,6 @@ public class SongPlayerSongsScreen extends WindowScreen {
         table = add(theme.table()).widget();
 
         initSongsTable();
-        
-        // Stop button
-        add(theme.horizontalSeparator()).expandX();
-        WButton stop = add(theme.button("Stop")).expandX().widget();
-        stop.action = this::stopPlayback;
     }
     
     // Go back to parent directory
@@ -90,20 +90,39 @@ public class SongPlayerSongsScreen extends WindowScreen {
     private void initSongsTable() {
         AtomicBoolean noSongsFound = new AtomicBoolean(true);
         try {
+            // Separate directories and files
+            java.util.List<Path> directories = new java.util.ArrayList<>();
+            java.util.List<Path> files = new java.util.ArrayList<>();
+            
             Files.list(currentDir).forEach(path -> {
-                if (Files.isRegularFile(path)) {
-                    String name = path.getFileName().toString();
-
-                    if (name.toLowerCase().contains(filterText.toLowerCase())) {
-                        addPath(path);
-                        noSongsFound.set(false);
-                    }
-                } else if (Files.isDirectory(path)) {
-                    // Add directory entry
+                if (Files.isDirectory(path)) {
+                    directories.add(path);
+                } else if (Files.isRegularFile(path)) {
+                    files.add(path);
+                }
+            });
+            
+            // Sort directories and files separately
+            directories.sort((a, b) -> a.getFileName().toString().compareToIgnoreCase(b.getFileName().toString()));
+            files.sort((a, b) -> a.getFileName().toString().compareToIgnoreCase(b.getFileName().toString()));
+            
+            // Process directories first
+            for (Path path : directories) {
+                String name = path.getFileName().toString();
+                if (name.toLowerCase().contains(filterText.toLowerCase())) {
                     addDirectoryPath(path);
                     noSongsFound.set(false);
                 }
-            });
+            }
+            
+            // Then process files
+            for (Path path : files) {
+                String name = path.getFileName().toString();
+                if (name.toLowerCase().contains(filterText.toLowerCase())) {
+                    addPath(path);
+                    noSongsFound.set(false);
+                }
+            }
         } catch (IOException e) {
             table.add(theme.label("Error reading directory.")).expandCellX();
             table.row();
