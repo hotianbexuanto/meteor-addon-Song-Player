@@ -14,20 +14,7 @@ import meteordevelopment.meteorclient.gui.GuiTheme;
 import meteordevelopment.meteorclient.gui.widgets.WWidget;
 import meteordevelopment.meteorclient.gui.widgets.containers.WHorizontalList;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WButton;
-import meteordevelopment.meteorclient.utils.player.ChatUtils;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.lwjgl.BufferUtils;
-import org.lwjgl.PointerBuffer;
-import org.lwjgl.system.MemoryUtil;
-import org.lwjgl.util.tinyfd.TinyFileDialogs;
+import hotian.addon.songplayer.gui.screens.SongPlayerSongsScreen;
 
 public class SongPlayerModule extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
@@ -40,26 +27,19 @@ public class SongPlayerModule extends Module {
             .build()
     );
 
-    // File filters for the file dialog
-    private final PointerBuffer filters;
-
     public SongPlayerModule() {
         super(SongPlayerAddon.CATEGORY, "song-player", "A module to play songs with noteblocks.");
-        
-        // Initialize file filters
-        filters = BufferUtils.createPointerBuffer(1);
-        ByteBuffer txtFilter = MemoryUtil.memASCII("*.mid;*.midi;*.nbs;*.txt");
-        filters.put(txtFilter);
-        filters.rewind();
     }
 
     @Override
     public WWidget getWidget(GuiTheme theme) {
         WHorizontalList list = theme.horizontalList();
         
-        // Button to select a song file
-        WButton selectFile = list.add(theme.button("Select File")).widget();
-        selectFile.action = this::openFileDialog;
+        // Button to open song selection GUI
+        WButton openSongGUI = list.add(theme.button("Open Song GUI")).widget();
+        openSongGUI.action = () -> {
+            mc.setScreen(new SongPlayerSongsScreen(theme));
+        };
         
         // Button to play the selected song
         WButton playButton = list.add(theme.button("Play")).widget();
@@ -67,33 +47,11 @@ public class SongPlayerModule extends Module {
         
         return list;
     }
-
-    // Open file dialog to select a song file
-    private void openFileDialog() {
-        String path = TinyFileDialogs.tinyfd_openFileDialog(
-            "Select Song File",
-            SongPlayer.SONG_DIR.toAbsolutePath().toString(),
-            filters,
-            null,
-            false
-        );
-        
-        if (path != null) {
-            // Get the file name relative to the songs directory
-            Path filePath = Path.of(path);
-            Path songsDir = SongPlayer.SONG_DIR.toAbsolutePath();
-            Path relativePath = songsDir.relativize(filePath);
-            songName.set(relativePath.toString());
-            ChatUtils.info("Selected song: " + relativePath.toString());
-        }
-    }
     
     // Play the selected song
     private void playSelectedSong() {
         if (!songName.get().isEmpty()) {
             SongHandler.getInstance().loadSong(songName.get());
-        } else {
-            ChatUtils.warning("No song selected. Please select a song file first.");
         }
     }
 
@@ -122,24 +80,23 @@ public class SongPlayerModule extends Module {
     
     // Get list of available songs from the songs directory as an array
     private String[] getAvailableSongsArray() {
-        List<String> songs = getAvailableSongs();
-        return songs.toArray(new String[0]);
+        return getAvailableSongs().toArray(new String[0]);
     }
     
     // Get list of available songs from the songs directory
-    public static List<String> getAvailableSongs() {
+    public static java.util.List<String> getAvailableSongs() {
         try {
-            if (!Files.exists(SongPlayer.SONG_DIR)) {
-                return new ArrayList<>();
+            if (!java.nio.file.Files.exists(SongPlayer.SONG_DIR)) {
+                return new java.util.ArrayList<>();
             }
             
-            return Files.list(SongPlayer.SONG_DIR)
-                    .filter(Files::isRegularFile)
-                    .map(Path::getFileName)
-                    .map(Path::toString)
-                    .collect(Collectors.toList());
-        } catch (IOException e) {
-            return new ArrayList<>();
+            return java.nio.file.Files.list(SongPlayer.SONG_DIR)
+                    .filter(java.nio.file.Files::isRegularFile)
+                    .map(java.nio.file.Path::getFileName)
+                    .map(java.nio.file.Path::toString)
+                    .collect(java.util.stream.Collectors.toList());
+        } catch (java.io.IOException e) {
+            return new java.util.ArrayList<>();
         }
     }
 }
